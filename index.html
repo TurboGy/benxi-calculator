@@ -1,0 +1,1735 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>本金、利息与罚息计算工具</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --paper: rgba(255, 252, 246, 0.94);
+      --paper-soft: rgba(246, 248, 251, 0.95);
+      --ink: #2d241d;
+      --muted: #70655b;
+      --accent: #965c2c;
+      --accent-strong: #6e3d18;
+      --line: rgba(85, 63, 47, 0.16);
+      --warm: #e7d2ba;
+      --cool: #d9e5ee;
+      --warning: #9a4b1b;
+      --danger: #8a2f2f;
+      --success: #2f6e47;
+      --shadow: 0 20px 60px rgba(74, 46, 23, 0.12);
+      --radius: 22px;
+      --radius-sm: 14px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", serif;
+      --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--sans);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.72), transparent 28%),
+        radial-gradient(circle at right 18% top 24%, rgba(210, 165, 118, 0.18), transparent 24%),
+        linear-gradient(160deg, #f6f0e8 0%, #efe2d3 42%, #efe8db 100%);
+    }
+
+    .shell {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 28px 20px 48px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 30px 30px 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255, 250, 242, 0.96), rgba(239, 228, 213, 0.92));
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -40px;
+      top: -50px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(150, 92, 44, 0.16), transparent 68%);
+      pointer-events: none;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      font-family: var(--serif);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.3rem);
+      line-height: 1.08;
+      max-width: 720px;
+    }
+
+    .hero p {
+      max-width: 880px;
+      margin: 14px 0 0;
+      line-height: 1.75;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(150, 92, 44, 0.18);
+      background: rgba(255, 255, 255, 0.64);
+      color: var(--accent-strong);
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 0.92fr;
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .workbench-card {
+      background: linear-gradient(180deg, rgba(255, 250, 242, 0.98), rgba(245, 235, 222, 0.96));
+      border-color: rgba(150, 92, 44, 0.2);
+    }
+
+    .data-card {
+      background: linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(236, 241, 245, 0.96));
+      border-color: rgba(106, 129, 145, 0.18);
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 22px 10px;
+    }
+
+    .card-head p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 0.93rem;
+    }
+
+    .card-body {
+      padding: 16px 22px 22px;
+    }
+
+    .subtle {
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(88, 64, 43, 0.14);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .toggle-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .toggle-row strong {
+      font-size: 0.96rem;
+    }
+
+    .linked-panel {
+      margin-top: 16px;
+      padding: 14px 16px 16px;
+      border: 1px solid rgba(88, 64, 43, 0.14);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.58);
+      transition: opacity 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .linked-panel.active {
+      background: rgba(255, 255, 255, 0.78);
+      border-color: rgba(150, 92, 44, 0.18);
+    }
+
+    .linked-panel.disabled {
+      opacity: 0.58;
+    }
+
+    .linked-panel-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .linked-panel-title strong {
+      font-size: 0.96rem;
+    }
+
+    .compact-box {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(88, 64, 43, 0.14);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .compact-box summary {
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--accent-strong);
+    }
+
+    .compact-box summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .compact-box summary::after {
+      content: "展开";
+      float: right;
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .compact-box[open] summary::after {
+      content: "收起";
+    }
+
+    .scroll-box {
+      margin-top: 12px;
+      max-height: 180px;
+      overflow: auto;
+      border: 1px solid rgba(88, 64, 43, 0.12);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.78);
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+
+    .result-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .result-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(88, 64, 43, 0.12);
+    }
+
+    .result-line strong {
+      font-family: var(--serif);
+      color: var(--accent-strong);
+      font-size: 1.02rem;
+    }
+
+    .is-disabled {
+      opacity: 0.42;
+      filter: grayscale(0.15);
+    }
+
+    .is-muted-field input,
+    .is-muted-field select,
+    .is-muted-field textarea {
+      background: rgba(255, 255, 255, 0.48);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .form-grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    label {
+      display: grid;
+      gap: 8px;
+      font-size: 0.92rem;
+      color: var(--ink);
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(88, 64, 43, 0.18);
+      background: rgba(255, 255, 255, 0.86);
+      color: var(--ink);
+      transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(150, 92, 44, 0.72);
+      box-shadow: 0 0 0 4px rgba(150, 92, 44, 0.12);
+    }
+
+    textarea {
+      min-height: 168px;
+      resize: vertical;
+      font-family: var(--mono);
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 16px;
+      cursor: pointer;
+      transition: transform 160ms ease, filter 160ms ease, opacity 160ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: saturate(1.05);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .primary {
+      background: linear-gradient(135deg, #9b6030, #7a431c);
+      color: #fff7ef;
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--ink);
+      border: 1px solid rgba(88, 64, 43, 0.16);
+    }
+
+    .ghost {
+      background: rgba(231, 210, 186, 0.54);
+      color: var(--accent-strong);
+    }
+
+    .danger {
+      background: rgba(138, 47, 47, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(138, 47, 47, 0.14);
+    }
+
+    .result {
+      display: grid;
+      gap: 14px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat {
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(241, 232, 221, 0.72));
+      border: 1px solid rgba(88, 64, 43, 0.1);
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 8px;
+    }
+
+    .stat strong {
+      font-family: var(--serif);
+      font-size: clamp(1.2rem, 2vw, 1.55rem);
+      color: var(--accent-strong);
+    }
+
+    .notice {
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      line-height: 1.65;
+      white-space: pre-wrap;
+    }
+
+    .notice.warning {
+      background: rgba(154, 75, 27, 0.08);
+      border-color: rgba(154, 75, 27, 0.16);
+      color: var(--warning);
+    }
+
+    .notice.success {
+      background: rgba(47, 110, 71, 0.08);
+      border-color: rgba(47, 110, 71, 0.16);
+      color: var(--success);
+    }
+
+    .notice.info {
+      background: rgba(150, 92, 44, 0.08);
+      border-color: rgba(150, 92, 44, 0.14);
+      color: var(--accent-strong);
+    }
+
+    .table-wrap {
+      border-radius: 16px;
+      border: 1px solid rgba(88, 64, 43, 0.14);
+      overflow: auto;
+      background: rgba(255, 255, 255, 0.75);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 540px;
+    }
+
+    th,
+    td {
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(88, 64, 43, 0.1);
+      text-align: left;
+      font-size: 0.92rem;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f7efe5;
+      color: var(--accent-strong);
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(150, 92, 44, 0.08);
+      color: var(--accent-strong);
+      font-size: 0.84rem;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .helper-list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .inline-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.7;
+    }
+
+    @media (max-width: 1080px) {
+      .grid,
+      .split {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .shell {
+        padding: 16px 14px 28px;
+      }
+
+      .hero,
+      .card-head,
+      .card-body {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .form-grid,
+      .form-grid.three,
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      table {
+        min-width: 480px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <h1>本金、一般债务利息与迟延履行利息计算工具</h1>
+      <p>
+        适合执行案件、旧案补算、按 LPR 或固定利率分段计息。页面内置一份默认 LPR 历史数据，
+        也支持你手工补录、导入、导出；如果计息区间涉及的月份缺失，会先提醒你补全，再进行 LPR 计算。
+      </p>
+      <div class="hero-meta">
+        <span class="tag">单文件 HTML</span>
+        <span class="tag">浏览器本地保存</span>
+        <span class="tag">按日期自动分段</span>
+        <span class="tag">缺失月份提醒</span>
+      </div>
+    </section>
+
+    <main class="grid">
+      <section class="stack">
+        <article class="card workbench-card">
+          <div class="card-head">
+            <div>
+              <h2>案件前提</h2>
+              <p>先填写执行案件的基础信息。计算时会自动检查利率数据是否完整，再分别计算本金、一般债务利息和迟延履行利息。</p>
+            </div>
+            <span class="pill" id="storageStatus">利率数据已就绪</span>
+          </div>
+          <div class="card-body">
+            <div class="form-grid">
+              <label>
+                <span class="field-label">本金</span>
+                <input id="principal" type="number" min="0" step="0.01" value="100000">
+              </label>
+              <label>
+                <span class="field-label">计算截止日期</span>
+                <input id="endDate" type="date">
+              </label>
+            </div>
+
+            <div class="linked-panel disabled" id="judgmentPanel">
+              <div class="linked-panel-title">
+                <div>
+                  <strong>判决生效期与履行期</strong>
+                  <div class="subtle">需要填写判决相关信息时再勾选启用。</div>
+                </div>
+                <label style="display:flex; align-items:center; gap:8px; font-size:0.92rem;">
+                  <input id="enableJudgmentInfo" type="checkbox" style="width:18px; height:18px; accent-color: var(--accent);">
+                  <span>填写判决信息</span>
+                </label>
+              </div>
+              <div class="form-grid" id="judgmentFields">
+                <label id="judgmentEffectiveDateWrap" class="is-muted-field">
+                  <span class="field-label">一审/二审判决生效日期</span>
+                  <input id="judgmentEffectiveDate" type="date" disabled>
+                </label>
+                <label id="performanceDueDateWrap" class="is-muted-field">
+                  <span class="field-label">履行期届满日期</span>
+                  <input id="performanceDueDate" type="date" disabled>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-grid three" style="margin-top:14px;">
+              <label>
+                <span class="field-label">起止日期计算</span>
+                <select id="dateInclusion">
+                  <option value="bothInclude">起止日期均计算在内</option>
+                  <option value="startInclude">起始日期计算在内，截止日期不计算在内</option>
+                  <option value="endInclude">起始日期不计算在内，截止日期计算在内</option>
+                  <option value="bothExclude">起止日期均不计算在内</option>
+                </select>
+              </label>
+              <label>
+                <span class="field-label">年化换算天数</span>
+                <select id="dayCountBase">
+                  <option value="360">360 天</option>
+                  <option value="365">365 天</option>
+                </select>
+              </label>
+              <label>
+                <span class="field-label">结果保留</span>
+                <select id="precision">
+                  <option value="2">2 位小数</option>
+                  <option value="4">4 位小数</option>
+                  <option value="6">6 位小数</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="toggle-row" style="margin-top:16px;">
+              <div>
+                <strong>一般债务利息</strong>
+                <div class="subtle">勾选后才会出现并参与总额计算。</div>
+              </div>
+              <input id="enableGeneralInterest" type="checkbox" checked>
+            </div>
+
+            <section id="generalInterestSection" style="margin-top:16px;">
+              <div class="compact-box">
+                <strong style="display:block; margin-bottom:12px;">一般债务利息设置</strong>
+                <div class="form-grid">
+                  <label>
+                    <span class="field-label">一般债务利息起算日</span>
+                    <input id="startDate" type="date">
+                  </label>
+                  <label>
+                    <span class="field-label">计息方式</span>
+                    <select id="rateMode">
+                      <option value="autoLegacyLpr">贷款基准利率 / LPR 自动衔接</option>
+                      <option value="lprSpread">LPR</option>
+                      <option value="benchmarkOnly">贷款基准利率</option>
+                      <option value="fixedAnnual">固定年利率</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-grid three" style="margin-top:14px;">
+                  <label id="annualRateWrap" hidden>
+                    <span class="field-label">年利率（%）</span>
+                    <input id="annualRate" type="number" step="0.0001" value="">
+                  </label>
+                  <label id="lprTenorWrap">
+                    <span class="field-label">LPR 品种</span>
+                    <select id="lprTenor">
+                      <option value="1Y">1 年期 LPR</option>
+                      <option value="5Y" selected>5 年期以上 LPR</option>
+                    </select>
+                  </label>
+                  <label id="benchmarkTenorWrap">
+                    <span class="field-label">基准利率档次</span>
+                    <select id="benchmarkTenor">
+                      <option value="6M">6 个月以内</option>
+                      <option value="1Y">6 个月至 1 年</option>
+                      <option value="1_3Y">1 至 3 年</option>
+                      <option value="3_5Y">3 至 5 年</option>
+                      <option value="5Y_PLUS" selected>5 年以上</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section style="margin-top:16px;">
+              <div class="compact-box">
+                <strong style="display:block; margin-bottom:12px;">迟延履行利息设置</strong>
+                <div class="form-grid">
+                  <label>
+                    <span class="field-label">迟延履行起算日</span>
+                    <input id="delayStartDateMirror" type="date">
+                  </label>
+                  <label>
+                    <span class="field-label">加倍部分日利率（%）</span>
+                    <input id="delayDailyRate" type="number" step="0.000001" value="0.0175">
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <div class="btn-row">
+              <button class="primary" id="calcBtn">开始计算</button>
+              <button class="secondary" id="todayBtn" type="button">截止日期设为今天</button>
+              <button class="ghost" id="downloadReportBtn" type="button">导出计算结果</button>
+            </div>
+
+            <div class="result" style="margin-top:18px;">
+              <div id="calcNotice" class="notice info">准备就绪。计算时会先检查利率数据是否缺失。</div>
+              <div class="result-list">
+                <div class="result-line">
+                  <span>本金</span>
+                  <strong id="principalResult">¥0.00</strong>
+                </div>
+                <div class="result-line" id="generalInterestLine">
+                  <span>一般债务利息</span>
+                  <strong id="generalInterestResult">¥0.00</strong>
+                </div>
+                <div class="result-line">
+                  <span>迟延履行利息</span>
+                  <strong id="delayInterestResult">¥0.00</strong>
+                </div>
+                <div class="result-line">
+                  <span>合计</span>
+                  <strong id="totalResult">¥0.00</strong>
+                </div>
+              </div>
+            </div>
+            <p class="footer-note">
+              默认参照同类工具：起止日期均计算在内、按 360 天折年、LPR 默认按分段计算且默认选 5 年期以上。
+              总额按“本金 + 一般债务利息（如勾选）+ 迟延履行利息”汇总。
+            </p>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h2>导出预览</h2>
+              <p>这里会生成完整的计算说明与结果表格，导出内容会保留案件前提、计算规则、各项金额和明细表。</p>
+            </div>
+            <span class="pill" id="segmentCount">0 条明细</span>
+          </div>
+          <div class="card-body">
+            <div id="calcSummary" class="notice info">计算完成后，会在这里生成导出文本。</div>
+            <div class="scroll-box" id="reportPreview">暂无导出内容</div>
+          </div>
+        </article>
+      </section>
+
+      <section class="stack">
+        <article class="card data-card">
+          <div class="card-head">
+            <div>
+              <h2>利率数据维护</h2>
+              <p>主界面不再铺开全部明细。这里只保留新增、导入导出和一个可滚动的简要预览。</p>
+            </div>
+            <div class="inline-actions">
+              <span class="pill" id="lprCount">0 条 LPR</span>
+              <span class="pill" id="benchmarkCount">0 条基准利率</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="missingNotice" class="notice warning">这里会显示利率数据缺失、导入格式问题或计算前的校验结果。</div>
+
+            <details class="compact-box" open style="margin-top:16px;">
+              <summary>LPR 数据</summary>
+              <div class="form-grid" style="margin-top:14px;">
+                <label>
+                  <span class="field-label">发布日期</span>
+                  <input id="newDate" type="date">
+                </label>
+                <label>
+                  <span class="field-label">1 年期 LPR（%）</span>
+                  <input id="newOneYear" type="number" step="0.0001" value="3.0">
+                </label>
+              </div>
+              <div class="form-grid" style="margin-top:14px;">
+                <label>
+                  <span class="field-label">5 年期以上 LPR（%）</span>
+                  <input id="newFiveYear" type="number" step="0.0001" value="3.5">
+                </label>
+                <label>
+                  <span class="field-label">查看年份</span>
+                  <select id="yearFilter"></select>
+                </label>
+              </div>
+              <div class="btn-row">
+                <button class="primary" id="saveEntryBtn" type="button">新增 / 覆盖 LPR</button>
+                <button class="secondary" id="restoreDefaultBtn" type="button">恢复默认数据</button>
+              </div>
+              <div class="scroll-box" id="lprPreviewBox">暂无 LPR 预览</div>
+            </details>
+
+            <details class="compact-box" style="margin-top:16px;">
+              <summary>贷款基准利率数据</summary>
+              <div class="form-grid three" style="margin-top:14px;">
+                <label>
+                  <span class="field-label">生效日期</span>
+                  <input id="benchmarkDate" type="date">
+                </label>
+                <label>
+                  <span class="field-label">6 个月以内（%）</span>
+                  <input id="benchmark6m" type="number" step="0.0001" value="0">
+                </label>
+                <label>
+                  <span class="field-label">6 个月至 1 年（%）</span>
+                  <input id="benchmark1y" type="number" step="0.0001" value="0">
+                </label>
+              </div>
+              <div class="form-grid three" style="margin-top:14px;">
+                <label>
+                  <span class="field-label">1 至 3 年（%）</span>
+                  <input id="benchmark1to3y" type="number" step="0.0001" value="0">
+                </label>
+                <label>
+                  <span class="field-label">3 至 5 年（%）</span>
+                  <input id="benchmark3to5y" type="number" step="0.0001" value="0">
+                </label>
+                <label>
+                  <span class="field-label">5 年以上（%）</span>
+                  <input id="benchmark5yPlus" type="number" step="0.0001" value="0">
+                </label>
+              </div>
+              <div class="btn-row">
+                <button class="primary" id="saveBenchmarkBtn" type="button">新增 / 覆盖基准利率</button>
+                <button class="danger" id="clearLocalBtn" type="button">清空本地覆盖</button>
+              </div>
+              <div class="scroll-box" id="benchmarkPreviewBox">暂无贷款基准利率预览</div>
+            </details>
+
+            <details class="compact-box" style="margin-top:16px;">
+              <summary>JSON 导入 / 导出</summary>
+              <textarea id="jsonArea" spellcheck="false"></textarea>
+              <div class="btn-row">
+                <button class="primary" id="exportBtn" type="button">导出当前 LPR</button>
+                <button class="secondary" id="importBtn" type="button">导入 LPR</button>
+                <button class="ghost" id="downloadBtn" type="button">下载 LPR JSON</button>
+              </div>
+              <textarea id="benchmarkJsonArea" spellcheck="false" style="margin-top:14px;"></textarea>
+              <div class="btn-row">
+                <button class="secondary" id="exportBenchmarkBtn" type="button">导出基准利率</button>
+                <button class="secondary" id="importBenchmarkBtn" type="button">导入基准利率</button>
+                <button class="ghost" id="downloadBenchmarkBtn" type="button">下载基准利率 JSON</button>
+              </div>
+            </details>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const LPR_STORAGE_KEY = "interest-tool-lpr-dataset-v2";
+    const BENCHMARK_STORAGE_KEY = "interest-tool-benchmark-dataset-v1";
+
+    const DEFAULT_LPR_DATA = [
+      { date: "2019-08-20", oneYear: 4.25, fiveYear: 4.85 },
+      { date: "2019-09-20", oneYear: 4.20, fiveYear: 4.85 },
+      { date: "2019-10-21", oneYear: 4.20, fiveYear: 4.85 },
+      { date: "2019-11-20", oneYear: 4.15, fiveYear: 4.80 },
+      { date: "2019-12-20", oneYear: 4.15, fiveYear: 4.80 },
+      { date: "2020-01-20", oneYear: 4.15, fiveYear: 4.80 },
+      { date: "2020-02-20", oneYear: 4.05, fiveYear: 4.75 },
+      { date: "2020-03-20", oneYear: 4.05, fiveYear: 4.75 },
+      { date: "2020-04-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-05-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-06-22", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-07-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-08-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-09-21", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-10-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-11-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2020-12-21", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-01-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-02-22", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-03-22", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-04-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-05-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-06-21", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-07-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-08-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-09-22", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-10-20", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-11-22", oneYear: 3.85, fiveYear: 4.65 },
+      { date: "2021-12-20", oneYear: 3.80, fiveYear: 4.65 },
+      { date: "2022-01-20", oneYear: 3.70, fiveYear: 4.60 },
+      { date: "2022-02-21", oneYear: 3.70, fiveYear: 4.60 },
+      { date: "2022-03-21", oneYear: 3.70, fiveYear: 4.60 },
+      { date: "2022-04-20", oneYear: 3.70, fiveYear: 4.60 },
+      { date: "2022-05-20", oneYear: 3.70, fiveYear: 4.45 },
+      { date: "2022-06-20", oneYear: 3.70, fiveYear: 4.45 },
+      { date: "2022-07-20", oneYear: 3.70, fiveYear: 4.45 },
+      { date: "2022-08-22", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2022-09-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2022-10-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2022-11-21", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2022-12-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2023-01-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2023-02-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2023-03-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2023-04-20", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2023-05-22", oneYear: 3.65, fiveYear: 4.30 },
+      { date: "2023-06-20", oneYear: 3.55, fiveYear: 4.20 },
+      { date: "2023-07-20", oneYear: 3.55, fiveYear: 4.20 },
+      { date: "2023-08-21", oneYear: 3.45, fiveYear: 4.20 },
+      { date: "2023-09-20", oneYear: 3.45, fiveYear: 4.20 },
+      { date: "2023-10-20", oneYear: 3.45, fiveYear: 4.20 },
+      { date: "2023-11-20", oneYear: 3.45, fiveYear: 4.20 },
+      { date: "2023-12-20", oneYear: 3.45, fiveYear: 4.20 },
+      { date: "2024-01-22", oneYear: 3.45, fiveYear: 4.20 },
+      { date: "2024-02-20", oneYear: 3.45, fiveYear: 3.95 },
+      { date: "2024-03-20", oneYear: 3.45, fiveYear: 3.95 },
+      { date: "2024-04-22", oneYear: 3.45, fiveYear: 3.95 },
+      { date: "2024-05-20", oneYear: 3.45, fiveYear: 3.95 },
+      { date: "2024-06-20", oneYear: 3.45, fiveYear: 3.95 },
+      { date: "2024-07-22", oneYear: 3.35, fiveYear: 3.85 },
+      { date: "2024-08-20", oneYear: 3.35, fiveYear: 3.85 },
+      { date: "2024-09-20", oneYear: 3.35, fiveYear: 3.85 },
+      { date: "2024-10-21", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2024-11-20", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2024-12-20", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2025-01-20", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2025-02-20", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2025-03-20", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2025-04-21", oneYear: 3.10, fiveYear: 3.60 },
+      { date: "2025-05-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-06-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-07-21", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-08-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-09-22", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-10-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-11-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2025-12-22", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2026-01-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2026-02-24", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2026-03-20", oneYear: 3.00, fiveYear: 3.50 },
+      { date: "2026-04-20", oneYear: 3.00, fiveYear: 3.50 }
+    ];
+
+    const DEFAULT_BENCHMARK_DATA = [
+      { date: "1991-04-21", rate6M: 8.1, rate1Y: 8.64, rate1To3Y: 9, rate3To5Y: 9.54, rate5YPlus: 9.72 },
+      { date: "1993-05-15", rate6M: 8.82, rate1Y: 9.36, rate1To3Y: 10.8, rate3To5Y: 12.06, rate5YPlus: 12.24 },
+      { date: "1993-07-11", rate6M: 9, rate1Y: 10.98, rate1To3Y: 12.24, rate3To5Y: 13.86, rate5YPlus: 14.04 },
+      { date: "1995-01-01", rate6M: 9, rate1Y: 10.98, rate1To3Y: 12.96, rate3To5Y: 14.58, rate5YPlus: 14.76 },
+      { date: "1995-07-01", rate6M: 10.08, rate1Y: 12.06, rate1To3Y: 13.5, rate3To5Y: 15.12, rate5YPlus: 15.3 },
+      { date: "1996-05-01", rate6M: 9.72, rate1Y: 10.98, rate1To3Y: 13.14, rate3To5Y: 14.94, rate5YPlus: 15.12 },
+      { date: "1996-08-23", rate6M: 9.18, rate1Y: 10.08, rate1To3Y: 10.98, rate3To5Y: 11.7, rate5YPlus: 12.42 },
+      { date: "1997-10-23", rate6M: 7.65, rate1Y: 8.64, rate1To3Y: 9.36, rate3To5Y: 9.9, rate5YPlus: 10.53 },
+      { date: "1998-03-25", rate6M: 7.02, rate1Y: 7.92, rate1To3Y: 9, rate3To5Y: 9.72, rate5YPlus: 10.35 },
+      { date: "1998-07-01", rate6M: 6.57, rate1Y: 6.93, rate1To3Y: 7.11, rate3To5Y: 7.65, rate5YPlus: 8.01 },
+      { date: "1998-12-07", rate6M: 6.12, rate1Y: 6.39, rate1To3Y: 6.66, rate3To5Y: 7.2, rate5YPlus: 7.56 },
+      { date: "1999-06-10", rate6M: 5.58, rate1Y: 5.85, rate1To3Y: 5.94, rate3To5Y: 6.03, rate5YPlus: 6.21 },
+      { date: "2002-02-21", rate6M: 5.04, rate1Y: 5.31, rate1To3Y: 5.49, rate3To5Y: 5.58, rate5YPlus: 5.76 },
+      { date: "2004-10-29", rate6M: 5.22, rate1Y: 5.58, rate1To3Y: 5.76, rate3To5Y: 5.85, rate5YPlus: 6.12 },
+      { date: "2006-04-28", rate6M: 5.4, rate1Y: 5.85, rate1To3Y: 6.03, rate3To5Y: 6.12, rate5YPlus: 6.39 },
+      { date: "2006-08-19", rate6M: 5.58, rate1Y: 6.12, rate1To3Y: 6.3, rate3To5Y: 6.48, rate5YPlus: 6.84 },
+      { date: "2007-03-18", rate6M: 5.67, rate1Y: 6.39, rate1To3Y: 6.57, rate3To5Y: 6.75, rate5YPlus: 7.11 },
+      { date: "2007-05-19", rate6M: 5.85, rate1Y: 6.57, rate1To3Y: 6.75, rate3To5Y: 6.93, rate5YPlus: 7.2 },
+      { date: "2007-07-21", rate6M: 6.03, rate1Y: 6.84, rate1To3Y: 7.02, rate3To5Y: 7.2, rate5YPlus: 7.38 },
+      { date: "2007-08-22", rate6M: 6.21, rate1Y: 7.02, rate1To3Y: 7.2, rate3To5Y: 7.38, rate5YPlus: 7.56 },
+      { date: "2007-09-15", rate6M: 6.48, rate1Y: 7.29, rate1To3Y: 7.47, rate3To5Y: 7.65, rate5YPlus: 7.83 },
+      { date: "2007-12-21", rate6M: 6.57, rate1Y: 7.47, rate1To3Y: 7.56, rate3To5Y: 7.74, rate5YPlus: 7.83 },
+      { date: "2008-09-16", rate6M: 6.21, rate1Y: 7.2, rate1To3Y: 7.29, rate3To5Y: 7.56, rate5YPlus: 7.74 },
+      { date: "2008-10-09", rate6M: 6.12, rate1Y: 6.93, rate1To3Y: 7.02, rate3To5Y: 7.29, rate5YPlus: 7.47 },
+      { date: "2008-10-30", rate6M: 6.03, rate1Y: 6.66, rate1To3Y: 6.75, rate3To5Y: 7.02, rate5YPlus: 7.2 },
+      { date: "2008-11-27", rate6M: 5.04, rate1Y: 5.58, rate1To3Y: 5.67, rate3To5Y: 5.94, rate5YPlus: 6.12 },
+      { date: "2008-12-23", rate6M: 4.86, rate1Y: 5.31, rate1To3Y: 5.4, rate3To5Y: 5.76, rate5YPlus: 5.94 },
+      { date: "2010-10-20", rate6M: 5.1, rate1Y: 5.56, rate1To3Y: 5.6, rate3To5Y: 5.96, rate5YPlus: 6.14 },
+      { date: "2010-12-26", rate6M: 5.35, rate1Y: 5.81, rate1To3Y: 5.85, rate3To5Y: 6.22, rate5YPlus: 6.4 },
+      { date: "2011-02-09", rate6M: 5.6, rate1Y: 6.06, rate1To3Y: 6.1, rate3To5Y: 6.45, rate5YPlus: 6.6 },
+      { date: "2011-04-06", rate6M: 5.85, rate1Y: 6.31, rate1To3Y: 6.4, rate3To5Y: 6.65, rate5YPlus: 6.8 },
+      { date: "2011-07-07", rate6M: 6.1, rate1Y: 6.56, rate1To3Y: 6.65, rate3To5Y: 6.9, rate5YPlus: 7.05 },
+      { date: "2012-06-08", rate6M: 5.85, rate1Y: 6.31, rate1To3Y: 6.4, rate3To5Y: 6.65, rate5YPlus: 6.8 },
+      { date: "2012-07-06", rate6M: 5.6, rate1Y: 6, rate1To3Y: 6.15, rate3To5Y: 6.4, rate5YPlus: 6.55 },
+      { date: "2014-11-22", rate6M: 5.6, rate1Y: null, rate1To3Y: 6, rate3To5Y: null, rate5YPlus: 6.15 },
+      { date: "2015-03-01", rate6M: 5.35, rate1Y: null, rate1To3Y: 5.75, rate3To5Y: null, rate5YPlus: 5.9 },
+      { date: "2015-05-11", rate6M: 5.1, rate1Y: null, rate1To3Y: 5.5, rate3To5Y: null, rate5YPlus: 5.65 },
+      { date: "2015-06-28", rate6M: 4.85, rate1Y: null, rate1To3Y: 5.25, rate3To5Y: null, rate5YPlus: 5.4 },
+      { date: "2015-08-26", rate6M: 4.6, rate1Y: null, rate1To3Y: 5, rate3To5Y: null, rate5YPlus: 5.15 },
+      { date: "2015-10-24", rate6M: 4.35, rate1Y: null, rate1To3Y: 4.75, rate3To5Y: null, rate5YPlus: 4.9 }
+    ];
+
+    const elements = {
+      principal: document.getElementById("principal"),
+      endDate: document.getElementById("endDate"),
+      enableJudgmentInfo: document.getElementById("enableJudgmentInfo"),
+      judgmentPanel: document.getElementById("judgmentPanel"),
+      judgmentFields: document.getElementById("judgmentFields"),
+      judgmentEffectiveDate: document.getElementById("judgmentEffectiveDate"),
+      performanceDueDate: document.getElementById("performanceDueDate"),
+      delayStartDateMirror: document.getElementById("delayStartDateMirror"),
+      delayDailyRate: document.getElementById("delayDailyRate"),
+      dateInclusion: document.getElementById("dateInclusion"),
+      dayCountBase: document.getElementById("dayCountBase"),
+      precision: document.getElementById("precision"),
+      enableGeneralInterest: document.getElementById("enableGeneralInterest"),
+      generalInterestSection: document.getElementById("generalInterestSection"),
+      generalInterestLine: document.getElementById("generalInterestLine"),
+      startDate: document.getElementById("startDate"),
+      rateMode: document.getElementById("rateMode"),
+      annualRate: document.getElementById("annualRate"),
+      lprTenor: document.getElementById("lprTenor"),
+      benchmarkTenor: document.getElementById("benchmarkTenor"),
+      annualRateWrap: document.getElementById("annualRateWrap"),
+      lprTenorWrap: document.getElementById("lprTenorWrap"),
+      benchmarkTenorWrap: document.getElementById("benchmarkTenorWrap"),
+      calcBtn: document.getElementById("calcBtn"),
+      todayBtn: document.getElementById("todayBtn"),
+      downloadReportBtn: document.getElementById("downloadReportBtn"),
+      calcNotice: document.getElementById("calcNotice"),
+      calcSummary: document.getElementById("calcSummary"),
+      reportPreview: document.getElementById("reportPreview"),
+      principalResult: document.getElementById("principalResult"),
+      generalInterestResult: document.getElementById("generalInterestResult"),
+      delayInterestResult: document.getElementById("delayInterestResult"),
+      totalResult: document.getElementById("totalResult"),
+      segmentCount: document.getElementById("segmentCount"),
+      storageStatus: document.getElementById("storageStatus"),
+      missingNotice: document.getElementById("missingNotice"),
+      yearFilter: document.getElementById("yearFilter"),
+      newDate: document.getElementById("newDate"),
+      newOneYear: document.getElementById("newOneYear"),
+      newFiveYear: document.getElementById("newFiveYear"),
+      benchmarkDate: document.getElementById("benchmarkDate"),
+      benchmark6m: document.getElementById("benchmark6m"),
+      benchmark1y: document.getElementById("benchmark1y"),
+      benchmark1to3y: document.getElementById("benchmark1to3y"),
+      benchmark3to5y: document.getElementById("benchmark3to5y"),
+      benchmark5yPlus: document.getElementById("benchmark5yPlus"),
+      saveEntryBtn: document.getElementById("saveEntryBtn"),
+      saveBenchmarkBtn: document.getElementById("saveBenchmarkBtn"),
+      restoreDefaultBtn: document.getElementById("restoreDefaultBtn"),
+      clearLocalBtn: document.getElementById("clearLocalBtn"),
+      lprCount: document.getElementById("lprCount"),
+      benchmarkCount: document.getElementById("benchmarkCount"),
+      lprPreviewBox: document.getElementById("lprPreviewBox"),
+      benchmarkPreviewBox: document.getElementById("benchmarkPreviewBox"),
+      jsonArea: document.getElementById("jsonArea"),
+      benchmarkJsonArea: document.getElementById("benchmarkJsonArea"),
+      exportBtn: document.getElementById("exportBtn"),
+      importBtn: document.getElementById("importBtn"),
+      downloadBtn: document.getElementById("downloadBtn"),
+      exportBenchmarkBtn: document.getElementById("exportBenchmarkBtn"),
+      importBenchmarkBtn: document.getElementById("importBenchmarkBtn"),
+      downloadBenchmarkBtn: document.getElementById("downloadBenchmarkBtn")
+    };
+
+    const today = new Date();
+    elements.endDate.value = toDateInput(today);
+    const thirtyDaysEarlier = new Date(today);
+    thirtyDaysEarlier.setDate(today.getDate() - 30);
+    elements.startDate.value = toDateInput(thirtyDaysEarlier);
+    elements.newDate.value = toDateInput(today);
+    elements.benchmarkDate.value = toDateInput(today);
+
+    let lprData = loadDataset(LPR_STORAGE_KEY, DEFAULT_LPR_DATA, normalizeLprDataset);
+    let benchmarkData = loadDataset(BENCHMARK_STORAGE_KEY, DEFAULT_BENCHMARK_DATA, normalizeBenchmarkDataset);
+    let lastCalculation = null;
+
+    function toDateInput(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function parseDate(dateString) {
+      return new Date(`${dateString}T00:00:00`);
+    }
+
+    function addDays(date, days) {
+      const copy = new Date(date);
+      copy.setDate(copy.getDate() + days);
+      return copy;
+    }
+
+    function diffDays(start, endExclusive) {
+      return Math.round((endExclusive - start) / 86400000);
+    }
+
+    function parseNullableNumber(value) {
+      if (value === null || value === undefined || value === "") {
+        return null;
+      }
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? NaN : parsed;
+    }
+
+    function sortDataset(list) {
+      return [...list].sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function loadDataset(storageKey, defaults, normalizer) {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) {
+        return sortDataset(defaults);
+      }
+      try {
+        return normalizer(JSON.parse(raw));
+      } catch (error) {
+        console.error(error);
+        return sortDataset(defaults);
+      }
+    }
+
+    function persistDataset(storageKey, data) {
+      localStorage.setItem(storageKey, JSON.stringify(data));
+      updateStorageStatus();
+    }
+
+    function normalizeLprDataset(list) {
+      if (!Array.isArray(list)) {
+        throw new Error("LPR 数据格式错误");
+      }
+      const map = new Map();
+      list.forEach((item) => {
+        if (!item || !item.date) {
+          return;
+        }
+        const row = {
+          date: String(item.date).trim(),
+          oneYear: Number(item.oneYear),
+          fiveYear: Number(item.fiveYear)
+        };
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date) || Number.isNaN(row.oneYear) || Number.isNaN(row.fiveYear)) {
+          throw new Error("请确认 LPR 的 date / oneYear / fiveYear 字段");
+        }
+        map.set(row.date, row);
+      });
+      return sortDataset(Array.from(map.values()));
+    }
+
+    function normalizeBenchmarkDataset(list) {
+      if (!Array.isArray(list)) {
+        throw new Error("贷款基准利率数据格式错误");
+      }
+      const map = new Map();
+      list.forEach((item) => {
+        if (!item || !item.date) {
+          return;
+        }
+        const row = {
+          date: String(item.date).trim(),
+          rate6M: parseNullableNumber(item.rate6M),
+          rate1Y: parseNullableNumber(item.rate1Y),
+          rate1To3Y: parseNullableNumber(item.rate1To3Y),
+          rate3To5Y: parseNullableNumber(item.rate3To5Y),
+          rate5YPlus: parseNullableNumber(item.rate5YPlus)
+        };
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) {
+          throw new Error("请确认贷款基准利率的 date 字段");
+        }
+        const values = [row.rate6M, row.rate1Y, row.rate1To3Y, row.rate3To5Y, row.rate5YPlus];
+        if (values.some((value) => value !== null && Number.isNaN(value))) {
+          throw new Error("请确认贷款基准利率的数值字段");
+        }
+        map.set(row.date, row);
+      });
+      return sortDataset(Array.from(map.values()));
+    }
+
+    function updateStorageStatus() {
+      const localLpr = Boolean(localStorage.getItem(LPR_STORAGE_KEY));
+      const localBenchmark = Boolean(localStorage.getItem(BENCHMARK_STORAGE_KEY));
+      elements.storageStatus.textContent = localLpr || localBenchmark ? "使用本地维护数据" : "使用默认历史数据";
+    }
+
+    function formatCurrency(value, digits = 2) {
+      return `¥${Number(value).toLocaleString("zh-CN", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      })}`;
+    }
+
+    function formatPercent(value, digits = 4) {
+      return `${Number(value).toFixed(digits).replace(/\.?0+$/, "")}%`;
+    }
+
+    function normalizeInterestWindow(startDate, endDate, inclusionMode) {
+      let effectiveStart = new Date(startDate);
+      let effectiveEnd = new Date(endDate);
+      if (inclusionMode === "endInclude" || inclusionMode === "bothExclude") {
+        effectiveStart = addDays(effectiveStart, 1);
+      }
+      if (inclusionMode === "startInclude" || inclusionMode === "bothExclude") {
+        effectiveEnd = addDays(effectiveEnd, -1);
+      }
+      if (effectiveEnd < effectiveStart) {
+        throw new Error("按当前起止日期计算口径，计息天数为 0，请调整日期或计算规则。");
+      }
+      return { effectiveStart, effectiveEnd };
+    }
+
+    function monthRange(startDate, endDate) {
+      const months = [];
+      const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const limit = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+      while (cursor <= limit) {
+        months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`);
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+      return months;
+    }
+
+    function getLprEntryForDate(targetDate) {
+      const key = toDateInput(targetDate);
+      let result = null;
+      for (const row of lprData) {
+        if (row.date <= key) {
+          result = row;
+        } else {
+          break;
+        }
+      }
+      return result;
+    }
+
+    function getBenchmarkEntryForDate(targetDate) {
+      const key = toDateInput(targetDate);
+      let result = null;
+      for (const row of benchmarkData) {
+        if (row.date <= key) {
+          result = row;
+        } else {
+          break;
+        }
+      }
+      return result;
+    }
+
+    function getBreakpoints(dataset, startDate, endDate) {
+      return dataset
+        .map((item) => item.date)
+        .filter((date) => {
+          const parsed = parseDate(date);
+          return parsed > startDate && parsed <= endDate;
+        });
+    }
+
+    function benchmarkRateValue(entry, tenor) {
+      const mapping = {
+        "6M": entry.rate6M,
+        "1Y": entry.rate1Y,
+        "1_3Y": entry.rate1To3Y,
+        "3_5Y": entry.rate3To5Y,
+        "5Y_PLUS": entry.rate5YPlus
+      };
+      return mapping[tenor];
+    }
+
+    function benchmarkLabel(tenor) {
+      const labels = {
+        "6M": "6个月以内",
+        "1Y": "6个月至1年",
+        "1_3Y": "1至3年",
+        "3_5Y": "3至5年",
+        "5Y_PLUS": "5年以上"
+      };
+      return labels[tenor];
+    }
+
+    function validateLprCoverage(startDate, endDate) {
+      const months = monthRange(startDate, endDate);
+      const existingMonths = new Set(lprData.map((item) => item.date.slice(0, 7)));
+      const missing = months.filter((month) => !existingMonths.has(month));
+      if (missing.length) {
+        throw new Error(`LPR 数据缺失：${missing.join("、")}`);
+      }
+    }
+
+    function validateBenchmarkCoverage(startDate, endDate, tenor) {
+      if (!benchmarkData.length) {
+        throw new Error("当前没有贷款基准利率数据，请先录入。");
+      }
+      const first = getBenchmarkEntryForDate(startDate);
+      if (!first) {
+        throw new Error(`起算日前缺少贷款基准利率数据：${toDateInput(startDate)}`);
+      }
+      const breakpoints = getBreakpoints(benchmarkData, startDate, endDate);
+      for (const point of [toDateInput(startDate), ...breakpoints]) {
+        const entry = getBenchmarkEntryForDate(parseDate(point));
+        if (!entry) {
+          throw new Error(`起算日前缺少贷款基准利率数据：${point}`);
+        }
+        const rate = benchmarkRateValue(entry, tenor);
+        if (rate === null || rate === undefined) {
+          throw new Error(`${entry.date} 的 ${benchmarkLabel(tenor)}基准利率为空，请先补全。`);
+        }
+      }
+    }
+
+    function buildGeneralSegments(payload) {
+      if (!payload.enableGeneralInterest) {
+        return [];
+      }
+      if (!payload.startDate) {
+        throw new Error("已勾选一般债务利息，请填写一般债务利息起算日。");
+      }
+      if (payload.endDate < payload.startDate) {
+        throw new Error("计算截止日期不能早于一般债务利息起算日。");
+      }
+      const { effectiveStart, effectiveEnd } = normalizeInterestWindow(payload.startDate, payload.endDate, payload.dateInclusion);
+      const { principal, mode, annualRate, dayBase, precision, lprTenor, benchmarkTenor } = payload;
+      if (mode === "fixedAnnual") {
+        if (!(annualRate >= 0)) {
+          throw new Error("请输入正确的固定年利率。");
+        }
+        const days = diffDays(effectiveStart, addDays(effectiveEnd, 1));
+        return [{
+          category: "general",
+          start: toDateInput(effectiveStart),
+          end: toDateInput(effectiveEnd),
+          days,
+          base: "固定年利率",
+          rateLabel: formatPercent(annualRate, 4),
+          interest: roundTo(principal * (annualRate / 100) * (days / dayBase), precision)
+        }];
+      }
+
+      const segments = [];
+      const useBenchmark = mode === "benchmarkOnly" || mode === "autoLegacyLpr";
+      const useLpr = mode === "lprSpread" || mode === "autoLegacyLpr";
+      if (mode === "benchmarkOnly") {
+        validateBenchmarkCoverage(effectiveStart, effectiveEnd, benchmarkTenor);
+      }
+      if (mode === "lprSpread") {
+        validateLprCoverage(effectiveStart, effectiveEnd);
+      }
+
+      const lprFirstDate = lprData.length ? parseDate(lprData[0].date) : null;
+      const ranges = [];
+      if (mode === "autoLegacyLpr") {
+        if (!lprFirstDate) {
+          throw new Error("当前没有 LPR 数据，无法使用自动衔接方式。");
+        }
+        if (effectiveEnd < lprFirstDate) {
+          ranges.push({ type: "benchmark", start: effectiveStart, end: effectiveEnd });
+        } else if (effectiveStart >= lprFirstDate) {
+          ranges.push({ type: "lpr", start: effectiveStart, end: effectiveEnd });
+        } else {
+          ranges.push({ type: "benchmark", start: effectiveStart, end: addDays(lprFirstDate, -1) });
+          ranges.push({ type: "lpr", start: lprFirstDate, end: effectiveEnd });
+        }
+        validateBenchmarkCoverage(ranges[0].start, ranges[0].end, benchmarkTenor);
+        if (ranges.some((item) => item.type === "lpr")) {
+          const lprRange = ranges.find((item) => item.type === "lpr");
+          validateLprCoverage(lprRange.start, lprRange.end);
+        }
+      } else if (useBenchmark) {
+        ranges.push({ type: "benchmark", start: effectiveStart, end: effectiveEnd });
+      } else if (useLpr) {
+        ranges.push({ type: "lpr", start: effectiveStart, end: effectiveEnd });
+      } else {
+        throw new Error("暂不支持当前一般债务利息方式。");
+      }
+
+      for (const range of ranges) {
+        const dataset = range.type === "benchmark" ? benchmarkData : lprData;
+        const breakpoints = getBreakpoints(dataset, range.start, range.end);
+        const points = [toDateInput(range.start), ...breakpoints, toDateInput(addDays(range.end, 1))];
+        for (let i = 0; i < points.length - 1; i += 1) {
+          const segStart = parseDate(points[i]);
+          const segEndExclusive = parseDate(points[i + 1]);
+          const segEnd = addDays(segEndExclusive, -1);
+          const days = diffDays(segStart, segEndExclusive);
+          if (range.type === "benchmark") {
+            const entry = getBenchmarkEntryForDate(segStart);
+            const rate = benchmarkRateValue(entry, benchmarkTenor);
+            segments.push({
+              category: "general",
+              start: toDateInput(segStart),
+              end: toDateInput(segEnd),
+              days,
+              base: `${entry.date} 贷款基准利率`,
+              rateLabel: formatPercent(rate, 2),
+              interest: roundTo(principal * (rate / 100) * (days / dayBase), precision)
+            });
+          } else {
+            const entry = getLprEntryForDate(segStart);
+            const rate = lprTenor === "5Y" ? entry.fiveYear : entry.oneYear;
+            segments.push({
+              category: "general",
+              start: toDateInput(segStart),
+              end: toDateInput(segEnd),
+              days,
+              base: `${entry.date} ${lprTenor} LPR`,
+              rateLabel: formatPercent(rate, 2),
+              interest: roundTo(principal * (rate / 100) * (days / dayBase), precision)
+            });
+          }
+        }
+      }
+      return segments;
+    }
+
+    function buildDelaySegment(payload) {
+      if (!payload.delayStartDate) {
+        throw new Error("请填写迟延履行起算日。");
+      }
+      if (payload.endDate < payload.delayStartDate) {
+        throw new Error("计算截止日期不能早于迟延履行起算日。");
+      }
+      if (!(payload.delayDailyRate >= 0)) {
+        throw new Error("请输入正确的迟延履行日利率。");
+      }
+      const { effectiveStart, effectiveEnd } = normalizeInterestWindow(payload.delayStartDate, payload.endDate, payload.dateInclusion);
+      const days = diffDays(effectiveStart, addDays(effectiveEnd, 1));
+      return {
+        category: "delay",
+        start: toDateInput(effectiveStart),
+        end: toDateInput(effectiveEnd),
+        days,
+        base: "迟延履行期间加倍部分债务利息",
+        rateLabel: `${formatPercent(payload.delayDailyRate, 6)} / 日`,
+        interest: roundTo(payload.principal * (payload.delayDailyRate / 100) * days, payload.precision)
+      };
+    }
+
+    function roundTo(value, digits) {
+      const factor = 10 ** digits;
+      return Math.round(value * factor) / factor;
+    }
+
+    function collectPayload() {
+      const principal = Number(elements.principal.value);
+      const endDate = elements.endDate.value ? parseDate(elements.endDate.value) : null;
+      const startDate = elements.startDate.value ? parseDate(elements.startDate.value) : null;
+      const delayInput = elements.delayStartDateMirror.value;
+      const delayStartDate = delayInput ? parseDate(delayInput) : null;
+      const judgmentEnabled = elements.enableJudgmentInfo.checked;
+      if (!(principal > 0)) {
+        throw new Error("请输入正确的本金。");
+      }
+      if (!endDate) {
+        throw new Error("请填写计算截止日期。");
+      }
+      return {
+        principal,
+        enableJudgmentInfo: judgmentEnabled,
+        judgmentEffectiveDate: judgmentEnabled ? elements.judgmentEffectiveDate.value : "",
+        performanceDueDate: judgmentEnabled ? elements.performanceDueDate.value : "",
+        endDate,
+        startDate,
+        delayStartDate,
+        delayDailyRate: Number(elements.delayDailyRate.value),
+        enableGeneralInterest: elements.enableGeneralInterest.checked,
+        mode: elements.rateMode.value,
+        annualRate: Number(elements.annualRate.value),
+        lprTenor: elements.lprTenor.value,
+        benchmarkTenor: elements.benchmarkTenor.value,
+        dateInclusion: elements.dateInclusion.value,
+        dayBase: Number(elements.dayCountBase.value),
+        precision: Number(elements.precision.value)
+      };
+    }
+
+    function setNotice(target, type, text) {
+      target.className = `notice ${type}`;
+      target.textContent = text;
+    }
+
+    function buildReport(payload, generalSegments, delaySegment, generalTotal, delayTotal, total) {
+      const lines = [];
+      lines.push("一、前提");
+      lines.push(`是否填写判决信息：${payload.enableJudgmentInfo ? "是" : "否"}`);
+      lines.push(`一审/二审判决生效日：${payload.judgmentEffectiveDate || "未填写"}`);
+      lines.push(`履行期届满日：${payload.performanceDueDate || "未填写"}`);
+      lines.push(`迟延履行起算日：${payload.delayStartDate ? toDateInput(payload.delayStartDate) : "未填写"}`);
+      lines.push(`计息截止日：${toDateInput(payload.endDate)}`);
+      lines.push(`计息规则：${payload.dayBase} 天 / 年；${elements.dateInclusion.options[elements.dateInclusion.selectedIndex].text}`);
+      lines.push(`本金：${formatCurrency(payload.principal, payload.precision)}`);
+      lines.push("");
+      if (payload.enableGeneralInterest) {
+        lines.push("二、一般债务利息");
+        lines.push(`计算方式：${elements.rateMode.options[elements.rateMode.selectedIndex].text}`);
+        lines.push("时间段 | 执行利率 | 天数 | 利息（元）");
+        generalSegments.forEach((segment) => {
+          lines.push(`${segment.start} - ${segment.end} | ${segment.rateLabel} | ${segment.days} | ${Number(segment.interest).toFixed(payload.precision)}`);
+        });
+        lines.push(`合计 | - | ${generalSegments.reduce((sum, item) => sum + item.days, 0)} | ${Number(generalTotal).toFixed(payload.precision)}`);
+        lines.push("");
+      }
+      lines.push(payload.enableGeneralInterest ? "三、迟延履行利息" : "二、迟延履行利息");
+      lines.push("时间段 | 迟延履行天数 | 日利率 | 利息金额（元）");
+      lines.push(`${delaySegment.start} - ${delaySegment.end} | ${delaySegment.days} | ${delaySegment.rateLabel} | ${Number(delayTotal).toFixed(payload.precision)}`);
+      lines.push("");
+      lines.push(payload.enableGeneralInterest ? "四、合计" : "三、合计");
+      lines.push(`本金 | ${formatCurrency(payload.principal, payload.precision)}`);
+      if (payload.enableGeneralInterest) {
+        lines.push(`一般债务利息 | ${formatCurrency(generalTotal, payload.precision)}`);
+      }
+      lines.push(`迟延履行利息 | ${formatCurrency(delayTotal, payload.precision)}`);
+      lines.push(`合计 | ${formatCurrency(total, payload.precision)}`);
+      return lines.join("\n");
+    }
+
+    function calculate() {
+      try {
+        const payload = collectPayload();
+        const generalSegments = buildGeneralSegments(payload);
+        const delaySegment = buildDelaySegment(payload);
+        const generalTotal = generalSegments.reduce((sum, item) => sum + item.interest, 0);
+        const delayTotal = delaySegment.interest;
+        const total = payload.principal + generalTotal + delayTotal;
+        const report = buildReport(payload, generalSegments, delaySegment, generalTotal, delayTotal, total);
+        lastCalculation = { report };
+
+        elements.principalResult.textContent = formatCurrency(payload.principal, payload.precision);
+        elements.generalInterestResult.textContent = payload.enableGeneralInterest ? formatCurrency(generalTotal, payload.precision) : "未计入";
+        elements.delayInterestResult.textContent = formatCurrency(delayTotal, payload.precision);
+        elements.totalResult.textContent = formatCurrency(total, payload.precision);
+        elements.generalInterestLine.classList.toggle("is-disabled", !payload.enableGeneralInterest);
+        elements.segmentCount.textContent = `${generalSegments.length + 1} 条明细`;
+        elements.reportPreview.textContent = report;
+        setNotice(elements.calcNotice, "success", "已完成计算，利率数据检查通过。");
+        setNotice(elements.calcSummary, "success", "导出预览已生成，可直接下载。");
+        setNotice(elements.missingNotice, "success", "当前计算区间所需的利率数据完整。");
+      } catch (error) {
+        lastCalculation = null;
+        setNotice(elements.calcNotice, "warning", error.message);
+        setNotice(elements.missingNotice, "warning", error.message);
+        setNotice(elements.calcSummary, "info", "请先修正输入或补全利率数据，再生成导出内容。");
+        elements.reportPreview.textContent = "暂无导出内容";
+      }
+    }
+
+    function renderYearFilter() {
+      const years = [...new Set(lprData.map((item) => item.date.slice(0, 4)))].sort();
+      elements.yearFilter.innerHTML = '<option value="all">全部年份</option>' + years.map((year) => `<option value="${year}">${year} 年</option>`).join("");
+    }
+
+    function renderLprPreview() {
+      renderYearFilter();
+      const filter = elements.yearFilter.value || "all";
+      const visible = filter === "all" ? lprData : lprData.filter((item) => item.date.startsWith(filter));
+      elements.lprCount.textContent = `${lprData.length} 条 LPR`;
+      elements.lprPreviewBox.textContent = visible.slice(-12).reverse().map((item) => `${item.date}  1Y:${formatPercent(item.oneYear, 2)}  5Y:${formatPercent(item.fiveYear, 2)}`).join("\n") || "暂无 LPR 预览";
+    }
+
+    function renderBenchmarkPreview() {
+      elements.benchmarkCount.textContent = `${benchmarkData.length} 条基准利率`;
+      elements.benchmarkPreviewBox.textContent = benchmarkData.slice(-10).reverse().map((item) => `${item.date}  5Y+: ${item.rate5YPlus === null ? "-" : formatPercent(item.rate5YPlus, 2)}  1-3Y: ${item.rate1To3Y === null ? "-" : formatPercent(item.rate1To3Y, 2)}`).join("\n") || "暂无贷款基准利率预览";
+    }
+
+    function renderJsonAreas() {
+      elements.jsonArea.value = JSON.stringify(lprData, null, 2);
+      elements.benchmarkJsonArea.value = JSON.stringify(benchmarkData, null, 2);
+    }
+
+    function renderAll() {
+      renderLprPreview();
+      renderBenchmarkPreview();
+      renderJsonAreas();
+    }
+
+    function syncRateModeView() {
+      const mode = elements.rateMode.value;
+      elements.annualRateWrap.hidden = mode !== "fixedAnnual";
+      elements.lprTenorWrap.hidden = !["lprSpread", "autoLegacyLpr"].includes(mode);
+      elements.benchmarkTenorWrap.hidden = !["benchmarkOnly", "autoLegacyLpr"].includes(mode);
+    }
+
+    function syncGeneralVisibility() {
+      const enabled = elements.enableGeneralInterest.checked;
+      elements.generalInterestSection.classList.toggle("is-disabled", !enabled);
+      elements.generalInterestLine.classList.toggle("is-disabled", !enabled);
+    }
+
+    function syncJudgmentFields() {
+      const enabled = elements.enableJudgmentInfo.checked;
+      elements.judgmentPanel.classList.toggle("active", enabled);
+      elements.judgmentPanel.classList.toggle("disabled", !enabled);
+      [elements.judgmentEffectiveDate, elements.performanceDueDate].forEach((input) => {
+        input.disabled = !enabled;
+        input.parentElement.classList.toggle("is-muted-field", !enabled);
+      });
+    }
+
+    function saveEntry() {
+      const date = elements.newDate.value;
+      const oneYear = Number(elements.newOneYear.value);
+      const fiveYear = Number(elements.newFiveYear.value);
+      if (!date || Number.isNaN(oneYear) || Number.isNaN(fiveYear)) {
+        setNotice(elements.missingNotice, "warning", "请完整填写 LPR 发布日期和利率。");
+        return;
+      }
+      lprData = sortDataset([...lprData.filter((item) => item.date !== date), { date, oneYear, fiveYear }]);
+      persistDataset(LPR_STORAGE_KEY, lprData);
+      renderAll();
+      setNotice(elements.missingNotice, "success", `已保存 ${date} 的 LPR 数据。`);
+    }
+
+    function saveBenchmarkEntry() {
+      const date = elements.benchmarkDate.value;
+      const row = {
+        date,
+        rate6M: parseNullableNumber(elements.benchmark6m.value),
+        rate1Y: parseNullableNumber(elements.benchmark1y.value),
+        rate1To3Y: parseNullableNumber(elements.benchmark1to3y.value),
+        rate3To5Y: parseNullableNumber(elements.benchmark3to5y.value),
+        rate5YPlus: parseNullableNumber(elements.benchmark5yPlus.value)
+      };
+      if (!date) {
+        setNotice(elements.missingNotice, "warning", "请填写贷款基准利率生效日期。");
+        return;
+      }
+      benchmarkData = sortDataset([...benchmarkData.filter((item) => item.date !== date), row]);
+      persistDataset(BENCHMARK_STORAGE_KEY, benchmarkData);
+      renderAll();
+      setNotice(elements.missingNotice, "success", `已保存 ${date} 的贷款基准利率。`);
+    }
+
+    function restoreDefaults() {
+      lprData = sortDataset(DEFAULT_LPR_DATA);
+      benchmarkData = sortDataset(DEFAULT_BENCHMARK_DATA);
+      localStorage.removeItem(LPR_STORAGE_KEY);
+      localStorage.removeItem(BENCHMARK_STORAGE_KEY);
+      renderAll();
+      updateStorageStatus();
+      setNotice(elements.missingNotice, "success", "已恢复默认利率数据。");
+    }
+
+    function clearLocalOverride() {
+      localStorage.removeItem(LPR_STORAGE_KEY);
+      localStorage.removeItem(BENCHMARK_STORAGE_KEY);
+      lprData = sortDataset(DEFAULT_LPR_DATA);
+      benchmarkData = sortDataset(DEFAULT_BENCHMARK_DATA);
+      renderAll();
+      updateStorageStatus();
+      setNotice(elements.missingNotice, "success", "已清空本地覆盖，回到默认数据。");
+    }
+
+    function exportJson() {
+      elements.jsonArea.value = JSON.stringify(lprData, null, 2);
+    }
+
+    function exportBenchmarkJson() {
+      elements.benchmarkJsonArea.value = JSON.stringify(benchmarkData, null, 2);
+    }
+
+    function importJson() {
+      try {
+        lprData = normalizeLprDataset(JSON.parse(elements.jsonArea.value));
+        persistDataset(LPR_STORAGE_KEY, lprData);
+        renderAll();
+        setNotice(elements.missingNotice, "success", "已导入 LPR 数据。");
+      } catch (error) {
+        setNotice(elements.missingNotice, "warning", `导入 LPR 失败：${error.message}`);
+      }
+    }
+
+    function importBenchmarkJson() {
+      try {
+        benchmarkData = normalizeBenchmarkDataset(JSON.parse(elements.benchmarkJsonArea.value));
+        persistDataset(BENCHMARK_STORAGE_KEY, benchmarkData);
+        renderAll();
+        setNotice(elements.missingNotice, "success", "已导入贷款基准利率数据。");
+      } catch (error) {
+        setNotice(elements.missingNotice, "warning", `导入贷款基准利率失败：${error.message}`);
+      }
+    }
+
+    function downloadBlob(filename, content, type = "text/plain;charset=utf-8") {
+      const blob = new Blob([content], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson() {
+      downloadBlob(`lpr-data-${toDateInput(new Date())}.json`, JSON.stringify(lprData, null, 2), "application/json;charset=utf-8");
+    }
+
+    function downloadBenchmarkJson() {
+      downloadBlob(`benchmark-rate-data-${toDateInput(new Date())}.json`, JSON.stringify(benchmarkData, null, 2), "application/json;charset=utf-8");
+    }
+
+    function downloadReport() {
+      if (!lastCalculation) {
+        setNotice(elements.calcSummary, "warning", "请先完成一次计算，再导出结果。");
+        return;
+      }
+      downloadBlob(`计算结果-${toDateInput(new Date())}.txt`, lastCalculation.report);
+    }
+
+    elements.calcBtn.addEventListener("click", calculate);
+    elements.todayBtn.addEventListener("click", () => {
+      elements.endDate.value = toDateInput(new Date());
+    });
+    elements.downloadReportBtn.addEventListener("click", downloadReport);
+    elements.enableJudgmentInfo.addEventListener("change", syncJudgmentFields);
+    elements.enableGeneralInterest.addEventListener("change", syncGeneralVisibility);
+    elements.rateMode.addEventListener("change", syncRateModeView);
+    elements.saveEntryBtn.addEventListener("click", saveEntry);
+    elements.saveBenchmarkBtn.addEventListener("click", saveBenchmarkEntry);
+    elements.restoreDefaultBtn.addEventListener("click", restoreDefaults);
+    elements.clearLocalBtn.addEventListener("click", clearLocalOverride);
+    elements.exportBtn.addEventListener("click", exportJson);
+    elements.importBtn.addEventListener("click", importJson);
+    elements.downloadBtn.addEventListener("click", downloadJson);
+    elements.exportBenchmarkBtn.addEventListener("click", exportBenchmarkJson);
+    elements.importBenchmarkBtn.addEventListener("click", importBenchmarkJson);
+    elements.downloadBenchmarkBtn.addEventListener("click", downloadBenchmarkJson);
+    elements.yearFilter.addEventListener("change", renderLprPreview);
+
+    syncRateModeView();
+    syncJudgmentFields();
+    syncGeneralVisibility();
+    renderAll();
+    updateStorageStatus();
+    setNotice(elements.missingNotice, "info", "默认已载入一份历史 LPR 与贷款基准利率数据。开始计算时会自动先检查数据是否缺失。");
+  </script>
+</body>
+</html>
